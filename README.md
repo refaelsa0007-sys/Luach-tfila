@@ -106,3 +106,16 @@ The timeout defaults can be overridden for a controlled canary with `SITES_INSTA
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
 - [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+
+## DevOps
+
+The repository includes a complete GitHub delivery path:
+
+- CI on pull requests and pushes to `develop` / `main`
+- lint, TypeScript checks, tests, verified build and artifact upload
+- CodeQL and dependency review
+- weekly Dependabot updates
+- controlled `develop -> main` promotion
+- semantic release tags and immutable GitHub Release artifacts with SHA-256 checksums
+
+See [docs/DEVOPS.md](docs/DEVOPS.md) for the full branch, promotion, release and rollback process.
