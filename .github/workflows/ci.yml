@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.13
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+
+      - name: Cache project npm cache
+        uses: actions/cache@v4
+        with:
+          path: .sites-runtime/npm-cache
+          key: ${{ runner.os }}-node-22.13-npm-${{ hashFiles('.package-lock-parts/**', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-22.13-npm-
+
+      - name: Install locked dependencies
+        run: npm run install:ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test and build
+        run: npm test
+
+      - name: Upload deployable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
