@@ -1,0 +1,28 @@
+name: Promote develop to main
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  promote:
+    name: Open promotion PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or reuse promotion pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh pr list             --repo "${GITHUB_REPOSITORY}"             --base main             --head develop             --state open             --json url             --jq '.[0].url // empty')"
+
+          if [[ -n "${existing}" ]]; then
+            echo "Promotion PR already exists: ${existing}"
+            exit 0
+          fi
+
+          gh pr create             --repo "${GITHUB_REPOSITORY}"             --base main             --head develop             --title "Promote develop to main"             --body "Automated promotion PR. Merge only after CI and Security checks pass."
