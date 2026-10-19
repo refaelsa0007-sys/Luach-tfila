@@ -60,8 +60,12 @@ jobs:
       - name: Secure code scan
         run: npm run security:code
 
-      - name: Dependency vulnerability audit
+      - name: Production dependency vulnerability gate
         run: npm run security:deps
+
+      - name: Full dependency advisory report
+        continue-on-error: true
+        run: npm run security:deps:all
 
       - name: Generate CycloneDX SBOM
         run: npm sbom --sbom-format cyclonedx > sbom.cdx.json
