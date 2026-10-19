@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as Record<string, unknown>;
     const fieldStyles = body.fieldStyles && typeof body.fieldStyles === "object" ? body.fieldStyles as Record<string, unknown> : {};
-    let items = orderedItems(body.items);
+    const items = orderedItems(body.items);
     if (!Array.isArray(body.items)) {
       const pushText = (value: unknown, kind: "heading" | "text", valueStyle: unknown) => {
         const content = text(value, 140);
