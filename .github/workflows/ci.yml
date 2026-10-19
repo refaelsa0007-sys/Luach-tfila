@@ -16,24 +16,24 @@ permissions:
 
 jobs:
   verify:
-    name: Lint, typecheck, test and build
+    name: Lint, typecheck, secure code, test and build
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Use Node.js 22.13
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22.13.0
 
       - name: Cache project npm cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .sites-runtime/npm-cache
-          key: ${{ runner.os }}-node-22.13-npm-${{ hashFiles('.package-lock-parts/**', 'package-lock.json') }}
+          key: ${{ runner.os }}-node-22.13-npm-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-22.13-npm-
 
@@ -46,11 +46,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Secure code policy
+        run: npm run security:code
+
       - name: Test and build
         run: npm test
 
       - name: Upload deployable artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site-dist-${{ github.sha }}
           path: dist/
