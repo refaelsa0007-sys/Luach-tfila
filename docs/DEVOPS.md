@@ -6,9 +6,10 @@ This repository uses a controlled GitHub flow for the synagogue schedule applica
 
 ```text
 feature/*  ->  develop  ->  main  ->  vMAJOR.MINOR.PATCH  ->  GitHub Release
-                   |          |              |
-                   CI         CI          verified artifact
-                Security   Security       + SHA-256
+   |             |          |              |
+   |          CI + CR     CI + CR      full release gate
+   |          Security   Security      + SBOM + SHA-256
+   +------ secure-code policy on every PR ------+
 ```
 
 - `feature/*`: short-lived development branches.
@@ -24,76 +25,104 @@ The pipeline:
 1. checks out the exact commit;
 2. pins Node.js 22.13;
 3. restores the project-scoped npm cache;
-4. reconstructs and installs the locked dependency tree through `npm run install:ci`;
+4. installs the canonical locked dependency tree through `npm run install:ci`;
 5. runs ESLint;
 6. runs TypeScript type checking;
-7. runs tests and the verified Vinext build;
-8. uploads `dist/` as a short-lived GitHub Actions artifact.
+7. runs the deterministic secure-code policy scan;
+8. runs tests and the verified Vinext build;
+9. uploads `dist/` as a short-lived GitHub Actions artifact.
 
-The build already validates that the produced Sites Worker exports `default.fetch` and that the packaged hosting manifest exists.
+The build validates that the produced Sites Worker exports `default.fetch` and that the packaged hosting manifest exists.
+
+## Automatic code review
+
+`.github/workflows/code-review.yml` reviews the PR diff and blocks obvious high-risk changes such as committed secrets, private keys, dynamic code execution and generated output. It also highlights API, dependency and workflow changes for review.
+
+The result is always written to the GitHub Actions summary. For non-Dependabot PRs it is also published as a PR comment. Dependabot PRs remain read-only and are not given elevated write permissions.
+
+`AGENTS.md` contains the project-specific review rules for Codex/AI review, including security, Hebrew RTL behavior, prayer ordering and PNG export.
 
 ## Security
 
-`.github/workflows/security.yml` provides:
-- CodeQL analysis for JavaScript/TypeScript;
-- pull-request dependency review, failing on high-or-higher dependency findings;
-- a scheduled weekly CodeQL scan.
+`.github/workflows/security.yml` runs:
+- GitHub CodeQL SAST for JavaScript/TypeScript;
+- the repository secure-code policy scan;
+- `npm audit --audit-level=high`;
+- CycloneDX SBOM generation and artifact upload;
+- a weekly scheduled security run.
+
+This replaces the previous GitHub Dependency Review job, which was unsupported because Dependency Graph is not enabled for this repository.
 
 Dependabot checks npm packages and GitHub Actions every Monday.
 
+## Secure coding baseline
+
+`scripts/secure-code-check.mjs` scans application, worker, database, build and scripting code for:
+- common credential/key patterns;
+- `eval` / `new Function`;
+- direct shell execution;
+- unsafe raw HTML APIs;
+- wildcard CORS;
+- plain HTTP URLs.
+
+Blocking findings fail CI. Advisory findings are reported for manual review.
+
+The poster API validates JSON content type and rejects oversized declared request bodies. The Worker adds baseline HTTP response headers including `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` and HSTS on HTTPS.
+
 ## Promotion
 
-Run the **Promote develop to main** workflow when `develop` is ready. It opens a pull request from `develop` to `main`, or reuses the existing open promotion PR.
+Run **Promote develop to main** when `develop` is ready. It opens a pull request from `develop` to `main`, or reuses the existing open promotion PR.
 
-Do not merge until required CI and Security checks are green.
+Do not merge until Automatic Code Review, CI and Security are green.
 
 ## Release
 
-Run the **Cut Release** workflow from `main` and enter a semantic version such as `v1.0.0`.
+Run **Cut Release** from `main` and enter a semantic version such as `v1.0.0`.
 
-It creates an annotated tag. The tag automatically triggers the **Release** workflow, which:
-1. installs the locked dependencies;
-2. runs the complete verification suite;
-3. builds the deployable `dist/` output;
-4. creates `luach-tfila-VERSION.tar.gz`;
-5. creates a SHA-256 checksum;
-6. publishes both files as a GitHub Release with generated release notes.
-
-This makes the GitHub Release asset the immutable production handoff artifact.
+The tag automatically triggers **Release**, which:
+1. installs the canonical lockfile;
+2. reruns lint, typecheck, secure-code checks, tests and verified build;
+3. reruns the dependency vulnerability gate;
+4. generates a CycloneDX SBOM;
+5. packages the deployable artifact;
+6. creates SHA-256 checksums;
+7. publishes the artifact, SBOM and checksums as an immutable GitHub Release.
 
 ## Production deployment
 
-The application source is prepared for the Sites/Vinext hosting model. The repository deliberately does not invent a deployment API or store a hosting credential that has not been provided.
+The repository deliberately does not invent a deployment credential or API that has not been configured.
 
-The production deployment boundary is therefore:
+The production boundary is:
 - source is promoted to `main`;
-- an immutable, verified GitHub Release artifact is produced;
-- the hosting platform consumes that approved artifact/commit using its supported deployment integration.
+- an immutable, verified GitHub Release is produced;
+- the hosting platform consumes that approved release/commit through its supported deployment integration.
 
-When a concrete hosting deployment API or connector is available, add it after the release verification step and protect it with the GitHub `production` environment.
+When a concrete hosting deployment API is available, add it after the release verification step and protect it with the GitHub `production` environment.
 
 ## Recommended repository rules
 
 Protect both `main` and `develop`.
 
-For `main`:
-- require a pull request before merging;
-- require at least 1 approval;
-- dismiss stale approvals after new commits;
-- require CODEOWNERS review;
-- require conversation resolution;
-- require branches to be up to date;
-- require the CI verification check;
-- require CodeQL / dependency review checks where applicable;
-- block force pushes;
-- block deletions.
+For `main` require:
+- pull request before merging;
+- at least 1 approval;
+- CODEOWNERS review;
+- conversation resolution;
+- branch up to date;
+- Automatic Code Review;
+- CI verification;
+- CodeQL SAST;
+- Secure Code + Dependency Audit;
+- no force pushes or deletion.
 
-For `develop`:
-- require a pull request;
-- require CI;
-- block force pushes and deletion.
+For `develop` require:
+- pull request;
+- Automatic Code Review;
+- CI;
+- Security;
+- no force pushes or deletion.
 
-GitHub connector access used to build this repository can write repository contents, but it does not expose branch-protection/ruleset mutation. Those enforcement switches must be enabled once in the GitHub repository settings.
+The current GitHub connector can write repository contents but does not expose branch-protection/ruleset mutation, so those enforcement switches must be enabled once in repository settings.
 
 ## Local developer commands
 
@@ -101,13 +130,21 @@ GitHub connector access used to build this repository can write repository conte
 npm run install:ci
 npm run lint
 npm run typecheck
+npm run security:code
+npm run security:deps
 npm test
 ```
 
-Or run the aggregate verification command:
+Aggregate quality verification:
 
 ```bash
 npm run check
+```
+
+Full security verification:
+
+```bash
+npm run security
 ```
 
 ## Rollback
@@ -119,4 +156,4 @@ Releases are immutable tags. To roll back:
 4. promote to `main`;
 5. cut a new patch version.
 
-Do not move an existing release tag to a different commit.
+Do not move an existing release tag to another commit.
