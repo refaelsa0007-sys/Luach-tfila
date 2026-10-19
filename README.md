@@ -97,6 +97,9 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm test`: build, validate, and verify the rendered development-preview metadata
 - `npm run validate:artifact`: recheck an existing artifact's manifest and ESM `default.fetch` export
 - `npm run db:generate`: generate Drizzle migrations after schema changes
+- `npm run security:code`: deterministic secure-code policy scan
+- `npm run security:deps`: fail on high-or-higher npm vulnerabilities
+- `npm run security`: run both security gates
 
 Use build and validation commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
 
@@ -113,7 +116,7 @@ The repository includes a complete GitHub delivery path:
 
 - CI on pull requests and pushes to `develop` / `main`
 - lint, TypeScript checks, tests, verified build and artifact upload
-- CodeQL and dependency review
+- CodeQL SAST, secure-code policy scanning, dependency vulnerability auditing and SBOM generation
 - weekly Dependabot updates
 - controlled `develop -> main` promotion
 - semantic release tags and immutable GitHub Release artifacts with SHA-256 checksums
