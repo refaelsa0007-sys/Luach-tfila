@@ -11,6 +11,8 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   review:
@@ -149,9 +151,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        permissions:
-          pull-requests: write
-          issues: write
         shell: bash
         run: |
           set -euo pipefail
