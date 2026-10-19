@@ -53,8 +53,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Request body too large" }, { status: 413 });
     }
 
-    const body = (await request.json()) as Record<string, unknown>;
-    const fieldStyles = body.fieldStyles && typeof body.fieldStyles === "object" ? body.fieldStyles as Record<string, unknown> : {};
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).byteLength > 64 * 1024) {
+      return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    }
+
+    const parsed = JSON.parse(rawBody) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return NextResponse.json({ error: "JSON body must be an object" }, { status: 400 });
+    }
+
+    const body = parsed as Record<string, unknown>;
+    const fieldStyles = body.fieldStyles && typeof body.fieldStyles === "object" && !Array.isArray(body.fieldStyles)
+      ? body.fieldStyles as Record<string, unknown>
+      : {};
     const items = orderedItems(body.items);
     if (!Array.isArray(body.items)) {
       const pushText = (value: unknown, kind: "heading" | "text", valueStyle: unknown) => {
