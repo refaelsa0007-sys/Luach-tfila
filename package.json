@@ -15,7 +15,10 @@
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "npm run lint && npm run typecheck && npm run security:code && npm test",
+    "security:code": "node scripts/secure-code-check.mjs",
+    "security:deps": "npm audit --audit-level=high",
+    "security": "npm run security:code && npm run security:deps"
   },
   "dependencies": {
     "@fontsource/alef": "^5.2.6",
