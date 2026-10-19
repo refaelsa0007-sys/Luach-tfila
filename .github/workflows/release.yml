@@ -42,8 +42,12 @@ jobs:
       - name: Full quality verification
         run: npm run check
 
-      - name: Dependency vulnerability gate
+      - name: Production dependency vulnerability gate
         run: npm run security:deps
+
+      - name: Full dependency advisory report
+        continue-on-error: true
+        run: npm run security:deps:all
 
       - name: Generate CycloneDX SBOM
         run: npm sbom --sbom-format cyclonedx > sbom.cdx.json
