@@ -9,7 +9,8 @@ Every pull request must pass the automated quality and security gates before mer
 - deterministic secure-code policy scan
 - tests and verified production build
 - GitHub CodeQL SAST
-- npm dependency vulnerability audit at **high** severity or above
+- production dependency vulnerability audit at **high** severity or above
+- full dependency advisory report for development/build tooling (reported even when an upstream package has no patched release)
 - automatic pull-request review
 
 Release tags run the full verification suite again, generate a CycloneDX SBOM, and publish checksums with the release artifact.
@@ -33,3 +34,10 @@ Dependabot proposes npm and GitHub Actions updates weekly. Dependency changes mu
 ## Reporting
 
 Do not open a public issue containing a credential, exploit payload, or private vulnerability detail. Revoke exposed credentials immediately and use the repository owner's private contact channel for sensitive reports.
+
+
+## Development-tooling advisories
+
+The production dependency audit is a blocking gate. The complete dependency audit is also run and retained for visibility, but development/build-only advisories are evaluated separately when the upstream ecosystem has no patched release.
+
+An advisory is never silently ignored: it remains visible in the Security workflow until a patched dependency path exists. Once a fix becomes available, Dependabot and the weekly security run are expected to surface it for upgrade.
