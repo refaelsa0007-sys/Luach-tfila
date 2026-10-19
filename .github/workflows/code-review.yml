@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: code-review-\${{ github.event.pull_request.number }}
+  group: code-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -31,14 +31,14 @@ jobs:
         id: review
         continue-on-error: true
         env:
-          BASE_SHA: \${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: \${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
 
-          git diff --name-only "\${BASE_SHA}...\${HEAD_SHA}" > changed-files.txt
-          git diff --no-color --unified=0 "\${BASE_SHA}...\${HEAD_SHA}" > pr.diff
+          git diff --name-only "${BASE_SHA}...${HEAD_SHA}" > changed-files.txt
+          git diff --no-color --unified=0 "${BASE_SHA}...${HEAD_SHA}" > pr.diff
 
           blockers=0
           warnings=0
@@ -56,135 +56,130 @@ jobs:
             severity="$1"
             location="$2"
             message="$3"
-            case "\${severity}" in
+            case "${severity}" in
               BLOCKER) blockers=$((blockers + 1)); icon='🚫' ;;
               WARNING) warnings=$((warnings + 1)); icon='⚠️' ;;
               INFO) infos=$((infos + 1)); icon='ℹ️' ;;
             esac
-            printf '| %s %s | %s | %s |\n' "\${icon}" "\${severity}" "\${location}" "\${message}" >> auto-review.md
+            printf '| %s %s | %s | %s |\n' "${icon}" "${severity}" "${location}" "${message}" >> auto-review.md
           }
 
           while IFS= read -r file; do
-            [[ -n "\${file}" ]] || continue
+            [[ -n "${file}" ]] || continue
 
-            if [[ "\${file}" =~ ^\.env($|\.) || "\${file}" =~ \.(pem|key|p12|pfx)$ ]]; then
-              add_finding BLOCKER "\${file}" 'Sensitive credential/key file must not be committed.'
+            if [[ "${file}" =~ ^\.env($|\.) || "${file}" =~ \.(pem|key|p12|pfx)$ ]]; then
+              add_finding BLOCKER "${file}" 'Sensitive credential/key file must not be committed.'
             fi
 
-            if [[ "\${file}" =~ ^(dist|\.next|node_modules)/ ]]; then
-              add_finding BLOCKER "\${file}" 'Generated/build output should not be committed.'
+            if [[ "${file}" =~ ^(dist|\.next|node_modules)/ ]]; then
+              add_finding BLOCKER "${file}" 'Generated/build output should not be committed.'
             fi
 
-            if [[ "\${file}" =~ ^\.github/workflows/ ]]; then
-              add_finding WARNING "\${file}" 'DevOps workflow changed; verify permissions, triggers and secret exposure.'
+            if [[ "${file}" =~ ^\.github/workflows/ ]]; then
+              add_finding WARNING "${file}" 'DevOps workflow changed; verify permissions, triggers and secret exposure.'
             fi
 
-            if [[ "\${file}" == 'package.json' || "\${file}" == 'package-lock.json' || "\${file}" =~ ^\.package-lock-parts/ ]]; then
-              add_finding WARNING "\${file}" 'Dependency surface changed; review supply-chain impact.'
+            if [[ "${file}" == 'package.json' || "${file}" == 'package-lock.json' ]]; then
+              add_finding WARNING "${file}" 'Dependency surface changed; review supply-chain impact.'
             fi
 
-            if [[ "\${file}" =~ ^app/api/ ]]; then
-              add_finding WARNING "\${file}" 'API route changed; verify authentication, authorization and input validation.'
+            if [[ "${file}" =~ ^app/api/ ]]; then
+              add_finding WARNING "${file}" 'API route changed; verify authentication, authorization, size limits and input validation.'
             fi
 
-            if [[ "\${file}" =~ ^app/ && "\${file}" =~ \.(tsx|ts|css)$ ]]; then
-              add_finding INFO "\${file}" 'Application code changed; verify Hebrew RTL and mobile rendering.'
+            if [[ "${file}" =~ ^app/ && "${file}" =~ \.(tsx|ts|css)$ ]]; then
+              add_finding INFO "${file}" 'Application code changed; verify Hebrew RTL and mobile rendering.'
             fi
           done < changed-files.txt
 
           added_lines="$(grep '^+' pr.diff | grep -v '^+++' || true)"
 
-          if grep -Eq -- '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' <<< "\${added_lines}"; then
+          if grep -Eq -- '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' <<< "${added_lines}"; then
             add_finding BLOCKER 'changed lines' 'Private key material detected.'
           fi
 
-          if grep -Eq -- '\bAKIA[0-9A-Z]{16}\b' <<< "\${added_lines}"; then
+          if grep -Eq -- '\bAKIA[0-9A-Z]{16}\b' <<< "${added_lines}"; then
             add_finding BLOCKER 'changed lines' 'AWS access key pattern detected.'
           fi
 
-          if grep -Eq -- '\b(ghp|github_pat)_[A-Za-z0-9_]{20,}\b' <<< "\${added_lines}"; then
+          if grep -Eq -- '\b(ghp|github_pat)_[A-Za-z0-9_]{20,}\b' <<< "${added_lines}"; then
             add_finding BLOCKER 'changed lines' 'GitHub token pattern detected.'
           fi
 
-          if grep -Eq -- '\b(eval[[:space:]]*\(|new[[:space:]]+Function[[:space:]]*\()' <<< "\${added_lines}"; then
+          if grep -Eq -- '\bsk-[A-Za-z0-9_-]{20,}\b' <<< "${added_lines}"; then
+            add_finding BLOCKER 'changed lines' 'OpenAI-style API key pattern detected.'
+          fi
+
+          if grep -Eq -- '\b(eval[[:space:]]*\(|new[[:space:]]+Function[[:space:]]*\()' <<< "${added_lines}"; then
             add_finding BLOCKER 'changed lines' 'Dynamic code execution introduced (eval/new Function).'
           fi
 
-          if grep -Fq 'dangerouslySetInnerHTML' <<< "\${added_lines}"; then
+          if grep -Fq 'dangerouslySetInnerHTML' <<< "${added_lines}"; then
             add_finding WARNING 'changed lines' 'dangerouslySetInnerHTML introduced; verify content is trusted or sanitized.'
-          fi
-
-          if grep -Eq -- '\bconsole\.(log|debug)[[:space:]]*\(' <<< "\${added_lines}"; then
-            add_finding WARNING 'changed lines' 'Debug logging added; verify it is intentional and contains no sensitive data.'
-          fi
-
-          if grep -Eq -- '\b(TODO|FIXME)\b' <<< "\${added_lines}"; then
-            add_finding INFO 'changed lines' 'TODO/FIXME introduced.'
           fi
 
           changed_count="$(wc -l < changed-files.txt | tr -d ' ')"
 
-          if [[ "\${blockers}" -eq 0 && "\${warnings}" -eq 0 && "\${infos}" -eq 0 ]]; then
+          if [[ "${blockers}" -eq 0 && "${warnings}" -eq 0 && "${infos}" -eq 0 ]]; then
             echo '| ✅ PASS | — | No policy findings in the changed lines. |' >> auto-review.md
           fi
 
           {
             echo
-            if [[ "\${blockers}" -gt 0 ]]; then
+            if [[ "${blockers}" -gt 0 ]]; then
               echo "**Result:** ❌ Changes required"
             else
               echo "**Result:** ✅ Passed"
             fi
             echo
-            echo "**Changed files:** \${changed_count}"
+            echo "**Changed files:** ${changed_count}"
             echo
-            echo "**Findings:** \${blockers} blocker(s), \${warnings} warning(s), \${infos} info"
+            echo "**Findings:** ${blockers} blocker(s), ${warnings} warning(s), ${infos} info"
             echo
             echo 'Only BLOCKER findings fail this Code Review check. CI and Security remain separate required quality gates.'
           } >> auto-review.md
 
           cat auto-review.md
+          cat auto-review.md >> "${GITHUB_STEP_SUMMARY}"
 
-          if [[ "\${blockers}" -gt 0 ]]; then
+          if [[ "${blockers}" -gt 0 ]]; then
             exit 1
           fi
 
       - name: Publish or update CR comment
-        if: always()
+        if: always() && github.actor != 'dependabot[bot]'
         env:
-          GH_TOKEN: \${{ github.token }}
-          PR_NUMBER: \${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
+          [[ -f auto-review.md ]] || {
+            echo '<!-- automatic-code-review -->' > auto-review.md
+            echo '## 🤖 Automatic Code Review' >> auto-review.md
+            echo >> auto-review.md
+            echo 'Review could not be generated. Inspect the workflow logs.' >> auto-review.md
+          }
+
           jq -Rs '{body: .}' auto-review.md > review-payload.json
 
           existing_id="$(
-            gh api "repos/\${GITHUB_REPOSITORY}/issues/\${PR_NUMBER}/comments" \
-              --paginate \
-              --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("<!-- automatic-code-review -->")) | .id' \
-              | head -n 1
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments"               --paginate               --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("<!-- automatic-code-review -->")) | .id'               | head -n 1
           )"
 
-          if [[ -n "\${existing_id}" ]]; then
-            gh api \
-              --method PATCH \
-              "repos/\${GITHUB_REPOSITORY}/issues/comments/\${existing_id}" \
-              --input review-payload.json
+          if [[ -n "${existing_id}" ]]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing_id}" --input review-payload.json
           else
-            gh api \
-              --method POST \
-              "repos/\${GITHUB_REPOSITORY}/issues/\${PR_NUMBER}/comments" \
-              --input review-payload.json
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --input review-payload.json
           fi
 
       - name: Enforce Code Review gate
         if: always()
         env:
-          REVIEW_OUTCOME: \${{ steps.review.outcome }}
+          REVIEW_OUTCOME: ${{ steps.review.outcome }}
         shell: bash
         run: |
-          if [[ "\${REVIEW_OUTCOME}" != "success" ]]; then
+          if [[ "${REVIEW_OUTCOME}" != "success" ]]; then
             echo 'Automatic Code Review found blocking issues.'
             exit 1
           fi

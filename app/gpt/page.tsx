@@ -24,7 +24,12 @@ export default function GptPage() {
   const [schemaUrl, setSchemaUrl] = useState("/api/openapi");
   const [copied, setCopied] = useState<"instructions" | "schema" | null>(null);
 
-  useEffect(() => setSchemaUrl(`${window.location.origin}/api/openapi`), []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSchemaUrl(`${window.location.origin}/api/openapi`);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const copy = async (kind: "instructions" | "schema", value: string) => {
     await navigator.clipboard.writeText(value);
