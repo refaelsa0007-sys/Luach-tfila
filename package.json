@@ -17,8 +17,9 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm run security:code && npm test",
     "security:code": "node scripts/secure-code-check.mjs",
-    "security:deps": "npm audit --audit-level=high",
-    "security": "npm run security:code && npm run security:deps"
+    "security:deps": "npm audit --omit=dev --audit-level=high",
+    "security": "npm run security:code && npm run security:deps",
+    "security:deps:all": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@fontsource/alef": "^5.2.6",
