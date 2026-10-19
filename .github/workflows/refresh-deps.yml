@@ -1,0 +1,56 @@
+name: Dependency Repair
+
+on:
+  push:
+    branches:
+      - feature/devops-security-hardening
+    paths:
+      - .github/workflows/refresh-deps.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Refresh vulnerable dependencies
+    if: github.event.head_commit.message == 'chore(devops): add dependency repair workflow'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+
+      - name: Update vulnerable production dependencies
+        run: |
+          npm install --save-exact             drizzle-orm@0.45.4             next@16.4.2             react@19.3.0             react-dom@19.3.0
+
+      - name: Update vulnerable and compatibility development dependencies
+        run: |
+          npm install --save-dev --save-exact             @cloudflare/vite-plugin@1.64.0             @tailwindcss/postcss@4.3.3             @types/react@19.3.0             @types/react-dom@19.3.0             @vitejs/plugin-react@6.1.2             @vitejs/plugin-rsc@0.5.36             drizzle-kit@0.31.11             eslint@10.12.0             eslint-config-next@16.4.2             react-server-dom-webpack@19.3.1             tailwindcss@4.3.3             vinext@1.1.0             vite@8.3.4             wrangler@4.149.0
+
+      - name: Apply non-breaking transitive security fixes
+        run: npm audit fix || true
+
+      - name: Verify no high or critical npm advisories remain
+        run: npm audit --audit-level=high
+
+      - name: Commit refreshed dependency lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No dependency changes to commit."
+            exit 0
+          fi
+          git commit -m "security: update vulnerable dependencies"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
