@@ -47,7 +47,8 @@ The result is always written to the GitHub Actions summary. For non-Dependabot P
 `.github/workflows/security.yml` runs:
 - GitHub CodeQL SAST for JavaScript/TypeScript;
 - the repository secure-code policy scan;
-- `npm audit --audit-level=high`;
+- a blocking `npm audit --omit=dev --audit-level=high` production-dependency gate;
+- a complete npm audit report for development/build-tooling advisories;
 - CycloneDX SBOM generation and artifact upload;
 - a weekly scheduled security run.
 
