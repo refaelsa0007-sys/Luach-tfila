@@ -43,9 +43,31 @@ const legacyNotes = (value: unknown) => Array.isArray(value)
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as Record<string, unknown>;
-    const fieldStyles = body.fieldStyles && typeof body.fieldStyles === "object" ? body.fieldStyles as Record<string, unknown> : {};
-    let items = orderedItems(body.items);
+    const contentType = request.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("application/json")) {
+      return NextResponse.json({ error: "Content-Type must be application/json" }, { status: 415 });
+    }
+
+    const contentLength = Number(request.headers.get("content-length") ?? "0");
+    if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
+      return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    }
+
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).byteLength > 64 * 1024) {
+      return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    }
+
+    const parsed = JSON.parse(rawBody) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return NextResponse.json({ error: "JSON body must be an object" }, { status: 400 });
+    }
+
+    const body = parsed as Record<string, unknown>;
+    const fieldStyles = body.fieldStyles && typeof body.fieldStyles === "object" && !Array.isArray(body.fieldStyles)
+      ? body.fieldStyles as Record<string, unknown>
+      : {};
+    const items = orderedItems(body.items);
     if (!Array.isArray(body.items)) {
       const pushText = (value: unknown, kind: "heading" | "text", valueStyle: unknown) => {
         const content = text(value, 140);
@@ -82,13 +104,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
-}
