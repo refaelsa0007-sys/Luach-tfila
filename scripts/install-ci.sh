@@ -63,12 +63,6 @@ for process in /proc/[0-9]*; do
   fi
 done
 
-parts_dir="${SITES_PROJECT_ROOT}/.package-lock-parts"
-if [[ -d "${parts_dir}" ]]; then
-  echo "[sites] reconstructing package-lock.json from repository parts"
-  cat "${parts_dir}"/part*.json > "${SITES_PROJECT_ROOT}/package-lock.json"
-fi
-
 lockfile_sha256="$(sha256sum "${SITES_PROJECT_ROOT}/package-lock.json" | awk '{print $1}')"
 use_seeded_cache=0
 seed_cache="${SITES_NPM_CACHE_SEED:-}"
