@@ -621,7 +621,7 @@ function PosterPreview({ data, backgroundUrl }: { data: Poster; backgroundUrl: s
     const bg = new Image();
     const top = new Image();
     let loaded = 0;
-    setReady(false);
+    const resetTimer = window.setTimeout(() => setReady(false), 0);
     const done = () => {
       loaded += 1;
       if (loaded === 2) {
@@ -634,6 +634,11 @@ function PosterPreview({ data, backgroundUrl }: { data: Poster; backgroundUrl: s
     top.src = "/header-source.webp";
     bg.onload = done;
     top.onload = done;
+    return () => {
+      window.clearTimeout(resetTimer);
+      bg.onload = null;
+      top.onload = null;
+    };
   }, [backgroundUrl]);
   useEffect(() => {
     if (ready) void document.fonts.ready.then(draw);
@@ -829,11 +834,14 @@ export default function Home() {
     setData((current) => ({ ...current, fieldStyles: { ...current.fieldStyles, mainTitle: style } }));
 
   useEffect(() => {
-    const shared = new URLSearchParams(window.location.search).get("d");
-    if (shared) {
-      const result = decode(shared);
-      if (result) setData(result);
-    }
+    const timer = window.setTimeout(() => {
+      const shared = new URLSearchParams(window.location.search).get("d");
+      if (shared) {
+        const result = decode(shared);
+        if (result) setData(result);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const copyLink = async () => {
