@@ -40,7 +40,9 @@ for (const file of [...new Set(files)].sort()) {
     if (/\b(?:test|it|describe)\.only\s*\(/.test(line)) add(file, lineNo, "focused-test", "Focused tests must not be committed.");
     if (/\b(?:test|it|describe)\.skip\s*\(/.test(line)) add(file, lineNo, "skipped-test", "Skipped tests require explicit review; remove or replace with a documented condition.");
     if (/\/\/\s*@ts-(?:ignore|nocheck)/.test(line)) add(file, lineNo, "typescript-bypass", "TypeScript suppression is not allowed in production code.");
-    if (/\bconsole\.(?:log|debug)\s*\(/.test(line)) add(file, lineNo, "debug-log", "Debug logging must not ship.");
+    if (/^(?:app|worker|db)[/\\]/.test(file) && /\bconsole\.(?:log|debug)\s*\(/.test(line)) {
+      add(file, lineNo, "debug-log", "Debug logging must not ship in runtime code.");
+    }
     if (/\b(?:TODO|FIXME)\b/.test(line)) add(file, lineNo, "unfinished-work", "TODO/FIXME must be resolved or tracked outside source before merge.");
   });
 }
