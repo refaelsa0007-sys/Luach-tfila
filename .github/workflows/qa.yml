@@ -1,0 +1,89 @@
+name: QA
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  code-qa:
+    name: QA Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22.13
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+
+      - name: Cache project npm cache
+        uses: actions/cache@v6
+        with:
+          path: .sites-runtime/npm-cache
+          key: ${{ runner.os }}-node-22.13-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-22.13-npm-
+
+      - name: Install locked dependencies
+        run: npm run install:ci
+
+      - name: Git whitespace/integrity check
+        run: git diff --check
+
+      - name: Code QA
+        run: npm run qa:code
+
+  product-qa:
+    name: QA Product
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Use Node.js 22.13
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+
+      - name: Cache project npm cache
+        uses: actions/cache@v6
+        with:
+          path: .sites-runtime/npm-cache
+          key: ${{ runner.os }}-node-22.13-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-22.13-npm-
+
+      - name: Install locked dependencies
+        run: npm run install:ci
+
+      - name: Install Chromium for product QA
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser product QA
+        run: npm run qa:product
+
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: product-qa-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
