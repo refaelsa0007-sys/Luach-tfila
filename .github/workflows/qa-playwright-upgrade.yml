@@ -1,0 +1,36 @@
+name: QA Playwright Upgrade
+
+on:
+  push:
+    branches:
+      - feature/qa-code-product-v2
+    paths:
+      - .github/workflows/qa-playwright-upgrade.yml
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade:
+    name: Upgrade Playwright for current runner OS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+      - name: Upgrade pinned Playwright
+        run: npm install --save-dev --save-exact @playwright/test@1.64.1
+      - name: Commit dependency lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "test(qa): upgrade Playwright for Ubuntu 26.04"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
