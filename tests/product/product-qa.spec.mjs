@@ -32,7 +32,11 @@ test("default poster editor is usable, RTL and render-ready", async ({ page }) =
 test("free-text flow creates an editable Hebrew schedule", async ({ page }, testInfo) => {
   if (testInfo.project.name.startsWith("mobile")) return;
   await page.goto("/");
-  await page.getByRole("button", { name: "טקסט חופשי" }).click();
+  await expect(page.getByRole("button", { name: "הורדת PNG" })).toBeEnabled({ timeout: 20_000 });
+  const textTab = page.locator(".tabs button").nth(1);
+  await expect(textTab).toHaveText("טקסט חופשי");
+  await textTab.click();
+  await expect(textTab).toHaveClass(/active/);
   const textarea = page.locator(".free-panel textarea");
   await expect(textarea).toBeVisible();
   await textarea.fill('כותרת הלוח: זמני חג\nפרשת נח\nמנחה ערב שבת 18:30, שחרית 08:00, הבדלה.');
