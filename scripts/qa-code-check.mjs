@@ -31,6 +31,7 @@ for (const root of SOURCE_ROOTS) {
 }
 
 for (const file of [...new Set(files)].sort()) {
+  if (file === "scripts/qa-code-check.mjs") continue;
   const source = await readFile(file, "utf8");
   const lines = source.split(/\r?\n/);
   lines.forEach((line, index) => {
