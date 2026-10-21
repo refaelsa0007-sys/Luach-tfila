@@ -39,8 +39,14 @@ jobs:
       - name: Install locked dependencies
         run: npm run install:ci
 
-      - name: Full quality verification
+      - name: Full code quality verification
         run: npm run check
+
+      - name: Install Chromium for product QA
+        run: npx playwright install --with-deps chromium
+
+      - name: Product QA gate
+        run: npm run qa:product
 
       - name: Production dependency vulnerability gate
         run: npm run security:deps

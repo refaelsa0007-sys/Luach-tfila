@@ -100,6 +100,9 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm run security:code`: deterministic secure-code policy scan
 - `npm run security:deps`: fail on high-or-higher npm vulnerabilities
 - `npm run security`: run both security gates
+- `npm run qa:code`: lint, typecheck and repository code-quality policy
+- `npm run qa:product`: run desktop/mobile browser product QA
+- `npm run qa`: run both QA layers
 
 Use build and validation commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
 
@@ -117,6 +120,7 @@ The repository includes a complete GitHub delivery path:
 - CI on pull requests and pushes to `develop` / `main`
 - lint, TypeScript checks, tests, verified build and artifact upload
 - CodeQL SAST, secure-code policy scanning, dependency vulnerability auditing and SBOM generation
+- separate QA Code and QA Product gates, including desktop/mobile Playwright flows
 - weekly Dependabot updates
 - controlled `develop -> main` promotion
 - semantic release tags and immutable GitHub Release artifacts with SHA-256 checksums

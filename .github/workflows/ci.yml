@@ -49,6 +49,9 @@ jobs:
       - name: Secure code policy
         run: npm run security:code
 
+      - name: Code QA policy
+        run: npm run qa:static
+
       - name: Test and build
         run: npm test
 

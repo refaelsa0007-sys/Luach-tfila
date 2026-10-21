@@ -9,6 +9,8 @@ Describe the user-visible and technical changes.
 - [ ] `npm run security:code`
 - [ ] `npm run security:deps` (production high/critical gate)
 - [ ] Full dependency advisory report reviewed when dependency tooling changes
+- [ ] `npm run qa:code`
+- [ ] `npm run qa:product` for user-visible/product changes
 - [ ] `npm test`
 - [ ] No secrets, credentials, private keys or private data were added
 - [ ] API/input validation impact was reviewed
