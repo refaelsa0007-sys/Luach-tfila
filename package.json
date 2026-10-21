@@ -15,11 +15,15 @@
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm run security:code && npm test",
+    "check": "npm run lint && npm run typecheck && npm run security:code && npm run qa:static && npm test",
     "security:code": "node scripts/secure-code-check.mjs",
     "security:deps": "npm audit --omit=dev --audit-level=high",
     "security": "npm run security:code && npm run security:deps",
-    "security:deps:all": "npm audit --audit-level=high"
+    "security:deps:all": "npm audit --audit-level=high",
+    "qa:static": "node scripts/qa-code-check.mjs",
+    "qa:code": "npm run lint && npm run typecheck && npm run qa:static",
+    "qa:product": "playwright test --config=playwright.config.mjs",
+    "qa": "npm run qa:code && npm run qa:product"
   },
   "dependencies": {
     "@fontsource/alef": "^5.2.6",
@@ -36,6 +40,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.64.0",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.19.19",
     "@types/react": "19.3.0",
