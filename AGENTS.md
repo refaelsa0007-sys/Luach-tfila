@@ -17,9 +17,10 @@ Check especially for:
 5. Dependency or GitHub Actions changes that weaken supply-chain security.
 6. Changes that break Hebrew RTL layout, poster text ordering, prayer-time rows, or PNG export.
 7. Missing tests for behavior changes.
+8. QA regressions in desktop/mobile behavior, RTL layout, editing flows, API-created share links, canvas readiness, or PNG workflow.
 
 ## DevOps expectations
 
-A change is not production-ready unless CI, Secure Code, CodeQL, dependency audit, tests, and the verified build pass.
+A change is not production-ready unless CI, QA Code, QA Product, Secure Code, CodeQL, dependency audit, tests, and the verified build pass.
 
 Do not bypass a failing security gate. Fix the underlying issue or document a narrowly scoped, reviewed exception.
