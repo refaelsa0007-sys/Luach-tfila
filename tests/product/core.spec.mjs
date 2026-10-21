@@ -100,6 +100,15 @@ test.describe("product smoke and regression QA", () => {
     expect(schema.components.schemas.Poster.properties.items.maxItems).toBe(60);
   });
 
+  test("supporting product routes remain available", async ({ page }) => {
+    await page.goto("/gpt");
+    await expect(page.getByRole("heading", { name: "GPT ללוחות זמני תפילה" })).toBeVisible();
+
+    await page.goto("/privacy");
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("body")).toContainText("פרטיות");
+  });
+
   test("mobile layout has no horizontal product overflow", async ({ page }, testInfo) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "יוצרים לוח זמני תפילה בדקות" })).toBeVisible();
