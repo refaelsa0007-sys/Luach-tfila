@@ -7,9 +7,10 @@ This repository uses a controlled GitHub flow for the synagogue schedule applica
 ```text
 feature/*  ->  develop  ->  main  ->  vMAJOR.MINOR.PATCH  ->  GitHub Release
    |             |          |              |
-   |          CI + CR     CI + CR      full release gate
-   |          Security   Security      + SBOM + SHA-256
-   +------ secure-code policy on every PR ------+
+   |       CI + CR + QA  CI + CR + QA   full release gate
+   |          Security      Security      + Product QA
+   |                                      + SBOM + SHA-256
+   +------ secure-code + code/product QA on every PR ------+
 ```
 
 - `feature/*`: short-lived development branches.
@@ -33,6 +34,15 @@ The pipeline:
 9. uploads `dist/` as a short-lived GitHub Actions artifact.
 
 The build validates that the produced Sites Worker exports `default.fetch` and that the packaged hosting manifest exists.
+
+## QA
+
+`.github/workflows/qa.yml` is a separate merge gate with two independent jobs:
+
+- **QA Code**: locked install, `git diff --check`, ESLint, TypeScript, lockfile/package consistency, no focused/skipped tests, no TypeScript bypasses, no debug statements/logging, and no unresolved TODO/FIXME markers.
+- **QA Product**: Playwright end-to-end tests in desktop Chromium and a mobile Chromium profile. It starts the real Vinext/Vite application and checks Hebrew RTL rendering, default poster readiness, free-text conversion, editable prayer times, the create-poster API, invalid-input handling, GPT/privacy routes, canvas readiness, and mobile horizontal overflow.
+
+On failure, Playwright retains screenshots, video and traces; GitHub Actions uploads the QA evidence for diagnosis.
 
 ## Automatic code review
 
@@ -74,7 +84,7 @@ The poster API validates JSON content type and rejects oversized declared reques
 
 Run **Promote develop to main** when `develop` is ready. It opens a pull request from `develop` to `main`, or reuses the existing open promotion PR.
 
-Do not merge until Automatic Code Review, CI and Security are green.
+Do not merge until Automatic Code Review, CI, QA Code, QA Product and Security are green.
 
 ## Release
 
@@ -82,12 +92,13 @@ Run **Cut Release** from `main` and enter a semantic version such as `v1.0.0`.
 
 The tag automatically triggers **Release**, which:
 1. installs the canonical lockfile;
-2. reruns lint, typecheck, secure-code checks, tests and verified build;
-3. reruns the dependency vulnerability gate;
-4. generates a CycloneDX SBOM;
-5. packages the deployable artifact;
-6. creates SHA-256 checksums;
-7. publishes the artifact, SBOM and checksums as an immutable GitHub Release.
+2. reruns lint, typecheck, secure-code checks, code QA, tests and verified build;
+3. installs Chromium and reruns the full Product QA suite;
+4. reruns the dependency vulnerability gate;
+5. generates a CycloneDX SBOM;
+6. packages the deployable artifact;
+7. creates SHA-256 checksums;
+8. publishes the artifact, SBOM and checksums as an immutable GitHub Release.
 
 ## Production deployment
 
@@ -114,6 +125,8 @@ For `main` require:
 - CI verification;
 - CodeQL SAST;
 - Secure Code + Dependency Audit;
+- QA Code;
+- QA Product;
 - no force pushes or deletion.
 
 For `develop` require:
@@ -121,6 +134,8 @@ For `develop` require:
 - Automatic Code Review;
 - CI;
 - Security;
+- QA Code;
+- QA Product;
 - no force pushes or deletion.
 
 The current GitHub connector can write repository contents but does not expose branch-protection/ruleset mutation, so those enforcement switches must be enabled once in repository settings.
@@ -133,6 +148,8 @@ npm run lint
 npm run typecheck
 npm run security:code
 npm run security:deps
+npm run qa:code
+npm run qa:product
 npm test
 ```
 
@@ -158,3 +175,10 @@ Releases are immutable tags. To roll back:
 5. cut a new patch version.
 
 Do not move an existing release tag to another commit.
+
+
+Run the complete QA suite locally after installing Playwright Chromium once with `npx playwright install chromium`:
+
+```bash
+npm run qa
+```
