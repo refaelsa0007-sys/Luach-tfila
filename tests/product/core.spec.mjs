@@ -11,7 +11,7 @@ test.describe("product smoke and regression QA", () => {
 
     const prayerNames = page.getByLabel("שם התפילה או האירוע");
     await expect(prayerNames.filter({ hasValue: "מנחה" }).first()).toBeVisible();
-    await expect(page.getByText("זמני תפילות ביום חול")).toBeVisible();
+    await expect(page.getByDisplayValue("זמני תפילות ביום חול")).toBeVisible();
 
     await page.screenshot({ path: testInfo.outputPath("home.png"), fullPage: true });
   });
@@ -31,9 +31,14 @@ test.describe("product smoke and regression QA", () => {
     expect(values).toContain("מנחה");
     expect(values).toContain("ערבית");
 
-    const bodyText = await page.locator(".content-editor").innerText();
-    expect(bodyText.indexOf("מנחה")).toBeLessThan(bodyText.indexOf("הבדלה"));
-    expect(bodyText.indexOf("הבדלה")).toBeLessThan(bodyText.indexOf("ערבית"));
+    const orderedValues = await page.locator(".content-item").evaluateAll((items) =>
+      items.map((item) => {
+        const input = item.querySelector("input[aria-label='שם התפילה או האירוע'], input[aria-label='שורה רגילה'], input[aria-label='כותרת']");
+        return input?.value ?? "";
+      }),
+    );
+    expect(orderedValues.indexOf("מנחה")).toBeLessThan(orderedValues.indexOf("הבדלה"));
+    expect(orderedValues.indexOf("הבדלה")).toBeLessThan(orderedValues.indexOf("ערבית"));
   });
 
   test("rejects an unsupported background file", async ({ page }) => {
