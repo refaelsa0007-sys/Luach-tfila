@@ -92,7 +92,7 @@ test("supporting routes load and navigation remains intact", async ({ page }) =>
 });
 
 test("mobile layout has no page-level horizontal overflow", async ({ page }, testInfo) => {
-  test.skip(!testInfo.project.name.startsWith("mobile"), "Mobile-specific layout assertion");
+  if (!testInfo.project.name.startsWith("mobile")) return;
   await page.goto("/");
   const metrics = await page.evaluate(() => ({
     innerWidth: window.innerWidth,
