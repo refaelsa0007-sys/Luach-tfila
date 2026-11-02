@@ -26,15 +26,15 @@
     "qa": "npm run qa:code && npm run qa:product"
   },
   "dependencies": {
-    "@fontsource/alef": "^5.2.6",
-    "@fontsource/assistant": "^5.2.6",
-    "@fontsource/david-libre": "^5.2.6",
-    "@fontsource/frank-ruhl-libre": "^5.2.6",
-    "@fontsource/heebo": "^5.2.6",
-    "@fontsource/noto-sans-hebrew": "^5.2.6",
-    "@fontsource/rubik": "^5.2.6",
+    "@fontsource/alef": "^5.3.0",
+    "@fontsource/assistant": "^5.3.0",
+    "@fontsource/david-libre": "^5.3.0",
+    "@fontsource/frank-ruhl-libre": "^5.3.0",
+    "@fontsource/heebo": "^5.3.0",
+    "@fontsource/noto-sans-hebrew": "^5.3.0",
+    "@fontsource/rubik": "^5.3.0",
     "drizzle-orm": "0.45.4",
-    "next": "16.4.2",
+    "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
